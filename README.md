@@ -21,6 +21,9 @@ Data Extractor is a Python application designed to extract text, hyperlinks, hea
   - `python-pptx`
   - `pdf2image`
   - `Pillow`
+  - `pytz`
+  - `python-dotenv`
+  - `mysql-connector-python`
 
 You can install the required libraries using pip:
 

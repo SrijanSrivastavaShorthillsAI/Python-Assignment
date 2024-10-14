@@ -1,3 +1,6 @@
 data_extractor/__pycache__/
 loader/__pycache__/
 storage/__pycache__/
+.env
+output_images
+*.txt
