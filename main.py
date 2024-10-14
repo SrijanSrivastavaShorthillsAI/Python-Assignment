@@ -13,7 +13,8 @@ def main():
 
     # file_path = 'Networks.pptx'
     # file_path = 'test.pdf'
-    file_path = 'demo.docx'
+    # file_path = 'demo.docx'
+    file_path = 'sample.pdf'
     
     # Select appropriate loader based on file extension
     if file_path.endswith('.pdf'):
@@ -32,6 +33,7 @@ def main():
     text_data = extractor.extract_text()
     hyperlinks = extractor.extract_links()
     images = extractor.extract_images()
+    tables = extractor.extract_tables()
 
     base_name = os.path.basename(file_path)
     name_without_extension = os.path.splitext(base_name)[0]
@@ -64,6 +66,7 @@ def main():
             linked_text=link.get('linked_text'),
             url=link.get('url')
         )
+    
     for image_path in images:
         sql_storage.insert_image(
             file_name=file_path,

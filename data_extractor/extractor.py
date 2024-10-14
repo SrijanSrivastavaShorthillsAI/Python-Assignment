@@ -1,4 +1,6 @@
 from typing import List, Dict, Any
+
+import tabula
 from loader.file_loader import FileLoader
 from loader.pdf_loader import PDFLoader
 from loader.docx_loader import DOCXLoader
@@ -10,8 +12,10 @@ from loader.docx_loader import DOCXLoader
 from loader.ppt_loader import PPTLoader
 from pdf2image import convert_from_path
 from PIL import Image
+import fitz
 import os
 import io
+import pandas as pd
 
 class DataExtractor:
     def __init__(self, loader: FileLoader):
@@ -149,13 +153,31 @@ class DataExtractor:
             return self._extract_images_from_pptx(output_folder)
 
     def _extract_images_from_pdf(self, output_folder: str) -> List[str]:
-        """Extract images from a PDF file by converting each page into an image."""
-        images = convert_from_path(self.file_path)
+        # Open the PDF file
+        pdf_document = fitz.open(self.file_path)
         image_paths = []
-        for i, image in enumerate(images):
-            image_path = os.path.join(output_folder, f'pdf_page_{i + 1}.png')
-            image.save(image_path, 'PNG')
-            image_paths.append(image_path)
+
+        # Loop through each page
+        for page_number in range(len(pdf_document)):
+            page = pdf_document[page_number]
+            image_list = page.get_images(full=True)  # Get images from the page
+            
+            for img_index, img in enumerate(image_list):
+                # Extract the image index and the XREF number
+                xref = img[0]
+                base_image = pdf_document.extract_image(xref)
+                
+                # Get the image bytes
+                image_bytes = base_image["image"]
+                image_extension = base_image["ext"]  # Get the image extension
+                image_path = os.path.join(output_folder, f'image_page_{page_number + 1}_{img_index + 1}.{image_extension}')
+
+                # Save the image
+                with open(image_path, "wb") as image_file:
+                    image_file.write(image_bytes)
+
+                image_paths.append(image_path)
+
         return image_paths
 
     def _extract_images_from_docx(self, output_folder: str) -> List[str]:
@@ -251,3 +273,58 @@ class DataExtractor:
                                 "page_number": None  # DOCX does not have a concept of pages
                             })
         return extracted_links
+
+    # * for tables
+    def extract_tables(self, output_folder="output_tables") -> List[str]:
+        """Extract tables from the loaded file (PDF, DOCX, PPTX) and save them as CSV files."""
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+
+        if isinstance(self.loader, PDFLoader):
+            return self._extract_tables_from_pdf(output_folder)
+        elif isinstance(self.loader, DOCXLoader):
+            return self._extract_tables_from_docx(output_folder)
+        elif isinstance(self.loader, PPTLoader):
+            return self._extract_tables_from_pptx(output_folder)
+
+    def _extract_tables_from_pdf(self, output_folder: str) -> List[str]:
+        # Extract tables from PDF
+        tables = tabula.read_pdf(self.file_path, pages='all', multiple_tables=True)
+
+        extracted_tables = []
+
+        # Save each table as a CSV file
+        for i, table in enumerate(tables):
+            csv_file_path = os.path.join(output_folder, f'table_pdf_{i + 1}.csv')
+            table.to_csv(csv_file_path, index=False)  # Save to CSV without index
+            extracted_tables.append(csv_file_path)
+
+        return extracted_tables
+
+    def _extract_tables_from_docx(self, output_folder: str) -> List[str]:
+        """Extract tables from a DOCX file and save as CSV."""
+        extracted_tables = []
+        for i, table in enumerate(self.file.tables):
+            # Convert the table to a DataFrame
+            data = [[cell.text for cell in row.cells] for row in table.rows]
+            df = pd.DataFrame(data)
+            csv_file_path = os.path.join(output_folder, f'table_docx_{i + 1}.csv')
+            df.to_csv(csv_file_path, index=False, header=False)
+            extracted_tables.append(csv_file_path)
+        return extracted_tables
+
+    def _extract_tables_from_pptx(self, output_folder: str) -> List[str]:
+        """Extract tables from a PPTX file and save as CSV."""
+        extracted_tables = []
+        for slide_num, slide in enumerate(self.file.slides, start=1):
+            for shape in slide.shapes:
+                if shape.has_table:
+                    table = shape.table
+                    data = [[cell.text for cell in row.cells] for row in table.rows]
+                    df = pd.DataFrame(data)
+                    csv_file_path = os.path.join(output_folder, f'table_pptx_slide_{slide_num}.csv')
+                    df.to_csv(csv_file_path, index=False, header=False)
+                    extracted_tables.append(csv_file_path)
+
+        print(extracted_tables)
+        return extracted_tables

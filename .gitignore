@@ -3,4 +3,8 @@ loader/__pycache__/
 storage/__pycache__/
 .env
 output_images
+output_tables
 *.txt
+*.pdf
+*.pptx
+*.docx
