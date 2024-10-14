@@ -2,10 +2,7 @@ data_extractor/__pycache__/
 loader/__pycache__/
 storage/__pycache__/
 .env
+input/
 output_images
 output_tables
-*.txt
-*.pdf
-*.pptx
-*.docx
-*.json
+test*

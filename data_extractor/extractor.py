@@ -157,9 +157,6 @@ class DataExtractor:
                 # Extract the image index and the XREF number
                 xref = img[0]
                 base_image = pdf_document.extract_image(xref)
-
-                if base_image["width"] < 10 or base_image["height"] < 10:
-                    continue
                 
                 # Get the image bytes
                 image_bytes = base_image["image"]
