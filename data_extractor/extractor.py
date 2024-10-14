@@ -259,24 +259,17 @@ class DataExtractor:
     def _extract_links_from_docx(self) -> List[Dict[str, Any]]:
         """Extract hyperlinks from a DOCX file."""
         extracted_links = []
-        # Iterate through the paragraphs to find runs that contain hyperlinks
-        for para in self.file.paragraphs:
-            for run in para.runs:
-                # Check if the run contains a hyperlink
-                for rel in self.file.part.rels.values():
-                    if "hyperlink" in rel.reltype and rel.target_ref in run._element.xml:
-                        linked_text = run.text  # Get the linked text
-                        hyperlink = rel.target_ref  # Get the hyperlink URL
 
-                        extracted_links.append({
-                            "linked_text": linked_text,
-                            "url": hyperlink,
-                            "page_number": None  # DOCX doesn't have page numbers
-                        })
+        # Access the document's relationships to find hyperlinks
+        for rel in self.file.part.rels.values():
+            if "hyperlink" in rel.reltype:
+                hyperlink = rel.target_ref  # Extract the hyperlink URL
+                extracted_links.append({
+                    "url": hyperlink,
+                })
 
         return extracted_links
    
-
     # * for tables
     def extract_tables(self, output_folder="output_tables") -> List[str]:
         """Extract tables from the loaded file (PDF, DOCX, PPTX) and save them as CSV files."""
