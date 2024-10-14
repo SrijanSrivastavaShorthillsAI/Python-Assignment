@@ -1,16 +1,9 @@
 from typing import List, Dict, Any
-
 import tabula
 from loader.file_loader import FileLoader
 from loader.pdf_loader import PDFLoader
 from loader.docx_loader import DOCXLoader
 from loader.ppt_loader import PPTLoader
-from typing import List, Dict, Any
-from loader.file_loader import FileLoader
-from loader.pdf_loader import PDFLoader
-from loader.docx_loader import DOCXLoader
-from loader.ppt_loader import PPTLoader
-from pdf2image import convert_from_path
 from PIL import Image
 import fitz
 import os
@@ -86,7 +79,6 @@ class DataExtractor:
             })
         return extracted_data
 
-    
     # * for heading
     def _extract_headings(self, text: str) -> List[str]:
         """Extract headings from text using simple heuristics."""
@@ -138,7 +130,6 @@ class DataExtractor:
                                 styles['italic'] += 1
         return styles
         
-
     # * for images
     def extract_images(self, output_folder="output_images") -> List[str]:
         """Extract images from the loaded file (PDF, DOCX, PPTX)."""
@@ -166,6 +157,9 @@ class DataExtractor:
                 # Extract the image index and the XREF number
                 xref = img[0]
                 base_image = pdf_document.extract_image(xref)
+
+                if base_image["width"] < 10 or base_image["height"] < 10:
+                    continue
                 
                 # Get the image bytes
                 image_bytes = base_image["image"]
@@ -243,36 +237,45 @@ class DataExtractor:
     def _extract_links_from_pptx(self) -> List[Dict[str, Any]]:
         """Extract hyperlinks from a PPTX file."""
         extracted_links = []
+        # Loop through each slide in the presentation
         for slide_num, slide in enumerate(self.file.slides, start=1):
+            # Loop through each shape in the slide
             for shape in slide.shapes:
-                if hasattr(shape, "hyperlink") and shape.hyperlink.address:
-                    extracted_links.append({
-                        "linked_text": shape.text,
-                        "url": shape.hyperlink.address,
-                        "slide_number": slide_num
-                    })
+                # Check if the shape has a text frame and it is not None
+                if hasattr(shape, "text_frame") and shape.text_frame is not None:
+                    # Loop through each paragraph in the text frame
+                    for paragraph in shape.text_frame.paragraphs:
+                        # Loop through each run in the paragraph
+                        for run in paragraph.runs:
+                            # Check if the run has a hyperlink and get the link address
+                            if run.hyperlink and run.hyperlink.address:
+                                extracted_links.append({
+                                    "linked_text": run.text,  # Get the text of the hyperlink
+                                    "url": run.hyperlink.address,  # Get the hyperlink address
+                                    "slide_number": slide_num  # Get the slide number
+                                })
         return extracted_links
 
     def _extract_links_from_docx(self) -> List[Dict[str, Any]]:
         """Extract hyperlinks from a DOCX file."""
         extracted_links = []
-        # Access the document's relationships to find hyperlinks
-        for rel in self.file.part.rels.values():
-            if "hyperlink" in rel.reltype:
-                # Extract the hyperlink target
-                hyperlink = rel.target_ref
-                
-                # Find the paragraph that contains this hyperlink
-                for para in self.file.paragraphs:
-                    for run in para.runs:
-                        if hyperlink in run._element.xml:
-                            linked_text = run.text
-                            extracted_links.append({
-                                "linked_text": linked_text,
-                                "url": hyperlink,
-                                "page_number": None  # DOCX does not have a concept of pages
-                            })
+        # Iterate through the paragraphs to find runs that contain hyperlinks
+        for para in self.file.paragraphs:
+            for run in para.runs:
+                # Check if the run contains a hyperlink
+                for rel in self.file.part.rels.values():
+                    if "hyperlink" in rel.reltype and rel.target_ref in run._element.xml:
+                        linked_text = run.text  # Get the linked text
+                        hyperlink = rel.target_ref  # Get the hyperlink URL
+
+                        extracted_links.append({
+                            "linked_text": linked_text,
+                            "url": hyperlink,
+                            "page_number": None  # DOCX doesn't have page numbers
+                        })
+
         return extracted_links
+   
 
     # * for tables
     def extract_tables(self, output_folder="output_tables") -> List[str]:
@@ -326,5 +329,4 @@ class DataExtractor:
                     df.to_csv(csv_file_path, index=False, header=False)
                     extracted_tables.append(csv_file_path)
 
-        print(extracted_tables)
         return extracted_tables

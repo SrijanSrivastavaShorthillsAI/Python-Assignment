@@ -11,10 +11,12 @@ load_dotenv()
 
 def main():
 
-    # file_path = 'Networks.pptx'
+    # file_path = 'test.pptx'
+    # file_path = 'sample.pptx'
     # file_path = 'test.pdf'
-    # file_path = 'demo.docx'
-    file_path = 'sample.pdf'
+    # file_path = 'sample.pdf'
+    file_path = 'test.docx'
+    # file_path = 'sample.docx'
     
     # Select appropriate loader based on file extension
     if file_path.endswith('.pdf'):
