@@ -53,15 +53,19 @@ class DataExtractor:
     def _extract_from_docx(self) -> List[Dict[str, Any]]:
         """Extract text and headings from a DOCX file."""
         extracted_data = []
-        for para in self.file.paragraphs:
+        page_num = 0
+        for para in (self.file.paragraphs):
             text = para.text
-            headings = self._extract_headings(text)
-            font_styles = {}  # You may add logic to extract font styles from DOCX if needed
-            extracted_data.append({
-                "text": text,
-                "headings": headings,
-                "font_styles": font_styles
-            })
+            if(text):
+                page_num += 1;
+                headings = self._extract_headings(text)
+                font_styles = {}  # You may add logic to extract font styles from DOCX if needed
+                extracted_data.append({
+                    "page_number":page_num,
+                    "text": text,
+                    "headings": headings,
+                    "font_styles": font_styles
+                })
         return extracted_data
 
     def _extract_from_pptx(self) -> List[Dict[str, Any]]:
@@ -72,7 +76,7 @@ class DataExtractor:
             headings = self._extract_headings(text)
             font_styles = self._extract_font_styles(text)
             extracted_data.append({
-                "slide_number": slide_num,
+                "page_number": slide_num,
                 "text": text,
                 "headings": headings,
                 "font_styles": font_styles
@@ -167,35 +171,35 @@ class DataExtractor:
                 with open(image_path, "wb") as image_file:
                     image_file.write(image_bytes)
 
-                image_paths.append(image_path)
+                image_paths.append([image_path, page_number + 1])
 
         return image_paths
 
     def _extract_images_from_docx(self, output_folder: str) -> List[str]:
         """Extract images from a DOCX file."""
         image_paths = []
-        for i, rel in enumerate(self.file.part.rels.values()):
+        for page_num, rel in enumerate(self.file.part.rels.values(), start=1):
             if "image" in rel.target_ref:
                 image_data = rel.target_part.blob
                 image = Image.open(io.BytesIO(image_data))
-                image_path = os.path.join(output_folder, f'docx_image_{i + 1}.png')
+                image_path = os.path.join(output_folder, f'docx_image_{page_num}.png')
                 image.save(image_path)
-                image_paths.append(image_path)
+                image_paths.append([image_path, page_num])
         return image_paths
 
     def _extract_images_from_pptx(self, output_folder: str) -> List[str]:
         """Extract images from a PPTX file."""
         image_paths = []
-        for i, slide in enumerate(self.file.slides):
+        for slide_num, slide in enumerate(self.file.slides, start=1):
             for shape in slide.shapes:
                 if shape.shape_type == 13:  # 13 corresponds to 'PICTURE'
                     image = shape.image
                     image_bytes = image.blob
-                    image_file_name = f'pptx_image_{i + 1}.png'
+                    image_file_name = f'pptx_image_{slide_num}.png'
                     image_path = os.path.join(output_folder, image_file_name)
                     with open(image_path, 'wb') as f:
                         f.write(image_bytes)
-                    image_paths.append(image_path)
+                    image_paths.append([image_path, slide_num])
         return image_paths
 
     # * for links
@@ -249,7 +253,7 @@ class DataExtractor:
                                 extracted_links.append({
                                     "linked_text": run.text,  # Get the text of the hyperlink
                                     "url": run.hyperlink.address,  # Get the hyperlink address
-                                    "slide_number": slide_num  # Get the slide number
+                                    "page_number": slide_num  # Get the slide number
                                 })
         return extracted_links
 
@@ -258,11 +262,12 @@ class DataExtractor:
         extracted_links = []
 
         # Access the document's relationships to find hyperlinks
-        for rel in self.file.part.rels.values():
+        for page_num, rel in enumerate(self.file.part.rels.values(), start=1):
             if "hyperlink" in rel.reltype:
                 hyperlink = rel.target_ref  # Extract the hyperlink URL
                 extracted_links.append({
                     "url": hyperlink,
+                    "page_number":page_num
                 })
 
         return extracted_links

@@ -38,7 +38,9 @@ class SQLStorage:
         CREATE TABLE IF NOT EXISTS extracted_images (
             id INT AUTO_INCREMENT PRIMARY KEY,
             file_name TEXT NOT NULL,
+            page_number INT,
             image_path TEXT NOT NULL,
+            image LONGBLOB,
             image_resolution VARCHAR(20),  
             image_size BIGINT
         );
@@ -73,7 +75,7 @@ class SQLStorage:
         self.cursor.execute(query, (file_name, page_number, linked_text, url))
         self.connection.commit()
 
-    def insert_image(self, file_name, image_path):
+    def insert_image(self, file_name, image_path, page_number):
             # Open the image and get its resolution
             with Image.open(image_path) as img:
                 width, height = img.size  # Get image width and height
@@ -82,12 +84,15 @@ class SQLStorage:
             # Get the file size in bytes
             image_size = os.path.getsize(image_path)
 
+            with open(image_path, 'rb') as image_file:
+                image_blob = image_file.read()
+
             # Insert the image data along with resolution and size into the database
             query = """
-            INSERT INTO extracted_images (file_name, image_path, image_resolution, image_size)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO extracted_images (file_name, page_number, image_path, image_resolution, image_size, image)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """
-            self.cursor.execute(query, (file_name, image_path, resolution, image_size))
+            self.cursor.execute(query, (file_name, page_number, image_path, resolution, image_size, image_blob))
             self.connection.commit()
 
     def close(self):

@@ -3,6 +3,8 @@ loader/__pycache__/
 storage/__pycache__/
 .env
 input/
-output_images
-output_tables
 test*
+decrypted*
+sample*
+pyt.py
+output*

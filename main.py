@@ -13,14 +13,13 @@ load_dotenv()
 def main():
 
     file_path = input("Enter the file path : ")
+    iterator = {".pdf" : PDFLoader(), ".docx" : DOCXLoader(), ".pptx" : PPTLoader()}
     
     # Select appropriate loader based on file extension
-    if file_path.endswith('.pdf'):
-        loader = PDFLoader()
-    elif file_path.endswith('.docx'):
-        loader = DOCXLoader()
-    elif file_path.endswith('.pptx'):
-        loader = PPTLoader()
+    for it in iterator:
+        if file_path.endswith(it):
+            loader = iterator[it]
+            break;
     else:
         raise ValueError("Unsupported file format")
     
@@ -56,7 +55,7 @@ def main():
     sql_storage.create_table_if_not_exists()
     for data in text_data:
         sql_storage.insert_data(
-            file_name=file_path,
+            file_name=os.path.basename(file_path),
             page_number=data.get('page_number'),
             text=data.get('text'),
             headings=data.get('headings'),
@@ -66,20 +65,20 @@ def main():
     # Store extracted hyperlinks and images into the database
     for link in hyperlinks:
         sql_storage.insert_link(
-            file_name=file_path,
+            file_name=os.path.basename(file_path),
             page_number=link.get('page_number'),
             linked_text=link.get('linked_text'),
             url=link.get('url')
         )
     
-    for image_path in images:
+    for image_path, page_number in images:
         sql_storage.insert_image(
-            file_name=file_path,
-            image_path=image_path
+            file_name=os.path.basename(file_path),
+            image_path=image_path,
+            page_number=page_number
         )
 
     print("Data extraction and storage complete.")
-
 
 if __name__ == "__main__":
     main()
