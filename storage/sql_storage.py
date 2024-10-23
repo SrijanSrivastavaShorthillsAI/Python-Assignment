@@ -4,14 +4,24 @@ import mysql.connector
 import json
 
 class SQLStorage:
-    def __init__(self, host, user, password, database):
+    def __init__(self, host, user, password):
         self.connection = mysql.connector.connect(
             host=host,
             user=user,
-            password=password,
-            database=database
+            password=password
         )
         self.cursor = self.connection.cursor()
+
+
+    def create_database(self, db_name="python"):
+        create_db_query = f"CREATE DATABASE IF NOT EXISTS {db_name};"
+        self.cursor.execute(create_db_query)
+        self.connection.commit()
+
+    def use_database(self, db_name="python"):
+        use_db_query = f"USE {db_name};"
+        self.cursor.execute(use_db_query)
+        self.connection.commit()
 
     def create_table_if_not_exists(self):
         # Creating a table for text data, hyperlinks, and images

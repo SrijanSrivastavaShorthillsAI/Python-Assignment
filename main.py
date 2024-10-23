@@ -51,7 +51,11 @@ def main():
     file_storage.store_data(hyperlinks, new_filename_links)
 
     # Store the extracted data into SQL database
-    sql_storage = SQLStorage(os.getenv("DATABASE_HOST"), os.getenv("DATABASE_USER"), os.getenv("DATABASE_PASSWORD"), os.getenv('DATABASE_NAME'))
+    sql_storage = SQLStorage(os.getenv("DATABASE_HOST"), os.getenv("DATABASE_USER"), os.getenv("DATABASE_PASSWORD"))
+
+    sql_storage.create_database("python_assignment")
+    sql_storage.use_database("python_assignment")
+    
     sql_storage.create_table_if_not_exists()
     for data in text_data:
         sql_storage.insert_data(
